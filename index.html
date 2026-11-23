@@ -10,12 +10,16 @@
 body{margin:0;background:#101510;color:white;font-family:Arial}
 header{background:#17251a;padding:22px;text-align:center;border-bottom:2px solid #20c45a}
 h1{color:#20df68;margin:0}
-nav{display:flex;justify-content:space-around;background:#1b241d;padding:14px}
-button{background:#20c45a;color:#07130a;border:0;padding:11px;border-radius:9px;font-weight:bold}
+nav{display:flex;justify-content:space-around;background:#1b241d;padding:14px;gap:6px}
+button{background:#20c45a;color:#07130a;border:0;padding:11px;border-radius:9px;font-weight:bold;cursor:pointer}
 main{padding:15px}
 .card{background:#202b22;padding:17px;border-radius:13px;margin:13px 0}
 h2{color:#36e879}
 .small{color:#aeb9af}
+.match{display:flex;justify-content:space-between;align-items:center;gap:8px;text-align:center}
+.team{flex:1}
+.score{font-size:20px;font-weight:bold;color:#36e879}
+.status{text-align:center;color:#b8c9bb;font-size:13px;margin-top:12px}
 </style>
 </head>
 <body>
@@ -35,7 +39,7 @@ h2{color:#36e879}
 </div>
 <div class="card">
 <h2>⚽ مباريات اليوم</h2>
-<p class="small">سيتم عرض المباريات هنا بعد ربط بيانات المباريات.</p>
+<p>اضغط على المباريات لمشاهدة النتائج.</p>
 </div>
 <div class="card">
 <h2>🏆 الدوريات</h2>
@@ -43,15 +47,86 @@ h2{color:#36e879}
 </div>
 <div class="card">
 <h2>🔔 الإشعارات</h2>
-<p>استعد لمتابعة أهداف فريقك المفضل.</p>
+<p>قريباً: إشعارات أهداف فريقك المفضل.</p>
 </div>
 </main>
+
 <script>
+const API = "https://small-mud-d2ec.m-hamdy-y2009.workers.dev";
+
 function show(page){
-let c=document.getElementById('content');
-if(page==='home') location.reload();
-if(page==='matches') c.innerHTML='<div class="card"><h2>⚽ المباريات</h2><p>قريباً: مواعيد ونتائج جميع المباريات.</p></div>';
-if(page==='tables') c.innerHTML='<div class="card"><h2>🏆 ترتيب الدوريات</h2><p>قريباً: ترتيب الفرق والهدافين.</p></div>';
+const c=document.getElementById('content');
+
+if(page==='home'){
+location.reload();
+}
+
+if(page==='matches'){
+c.innerHTML=`
+<div class="card">
+<h2>⚽ مباريات اليوم</h2>
+<p class="small" id="message">جاري تحميل المباريات...</p>
+<div id="games"></div>
+</div>`;
+loadMatches();
+}
+
+if(page==='tables'){
+c.innerHTML=`
+<div class="card">
+<h2>🏆 ترتيب الدوريات</h2>
+<p>سيتم إضافة ترتيب الفرق في الخطوة القادمة.</p>
+</div>`;
+}
+}
+
+async function loadMatches(){
+const message=document.getElementById('message');
+const games=document.getElementById('games');
+
+const today=new Date();
+const date=
+today.getFullYear()+"-"+
+String(today.getMonth()+1).padStart(2,"0")+"-"+
+String(today.getDate()).padStart(2,"0");
+
+try{
+const response=await fetch(`${API}/fixtures?date=${date}`);
+const data=await response.json();
+
+if(!response.ok || data.errors && Object.keys(data.errors).length){
+message.textContent="تعذر تحميل المباريات حالياً.";
+return;
+}
+
+if(!data.response || data.response.length===0){
+message.textContent="لا توجد مباريات متاحة لهذا اليوم.";
+return;
+}
+
+message.textContent="عدد المباريات: "+data.response.length;
+
+games.innerHTML=data.response.map(item=>{
+const home=item.teams.home.name;
+const away=item.teams.away.name;
+const hs=item.goals.home ?? "-";
+const as=item.goals.away ?? "-";
+const status=item.fixture.status.long;
+
+return `
+<div class="card">
+<div class="match">
+<div class="team">${home}</div>
+<div class="score">${hs} - ${as}</div>
+<div class="team">${away}</div>
+</div>
+<div class="status">${status}</div>
+</div>`;
+}).join("");
+
+}catch(error){
+message.textContent="تعذر الاتصال بالخادم. حاول لاحقاً.";
+}
 }
 </script>
 </body>
